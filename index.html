@@ -207,7 +207,10 @@
         }).addTo(my_map).bindPopup("Mody University of Science and Technology");
 
         const shuttleMarkers = {};
-        const socket = new WebSocket("ws://localhost:8000/ws/shuttle");
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const socketUrl = `${protocol}//${window.location.host}/ws/shuttle`;
+        const socket = new WebSocket(socketUrl);
+
         const statusPill = document.getElementById('status-pill');
 
         //when connection happens status bar changes its colour and give msg
