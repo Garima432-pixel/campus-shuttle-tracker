@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title> Mody University Campus Shuttle Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: sans-serif;
+        }
+
+        #header {
+            height: 50px;
+            background: #1e293b;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: contents;
+            padding: 020px;
+        }
+
+        #status-pill {
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: bold;
+            background: #ef4444
+        }
+
+        #map {
+            height: calc(100vh - 50px);
+            width: 100vw;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- for top bar with and status badge-->
+    <div id="header">
+        <h2>🚌 Mody University Shuttle Tracker</h2>
+        <span id="status-pill">Connecting...</span>
+    </div>
+    <div id="map"></div>
+    <!-- Importing Leaflet JS Engine-->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        const my_map = L.map('map').setView([27.8025, 75.0325], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(my_map)
+
+        // --- Route 1: Main gate -> Athlete ground -> Main gate ---
+        const route1Coordinates = [
+            [27.801558, 75.036106], // Main Gate
+            [27.804224, 75.031385], // ABB
+            [27.803579, 75.030946], // Mess
+            [27.802583, 75.030098], // Athlete Ground
+            [27.803579, 75.030946], // Mess (Return)
+            [27.804224, 75.031385], // ABB (Return)
+            [27.801558, 75.036106]  // Main Gate (Return)
+        ];
+
+        // --- Route 2: Main gate -> 15 Street -> Main gate ---
+        const route2Coordinates = [
+            [27.801558, 75.036106], // Main Gate
+            [27.804224, 75.031385], // ABB
+            [27.803579, 75.030946], // Mess
+            [27.801216, 75.029079], // Tapovan
+            [27.798435, 75.027298], // 15 Street
+            [27.801216, 75.029079], // Tapovan (Return)
+            [27.803579, 75.030946], // Mess (Return)
+            [27.804224, 75.031385], // ABB (Return)
+            [27.801558, 75.036106]  // Main Gate (Return)
+        ];
+        const ROUTE_STOPS = {
+            "MUST_BUS_01": [
+                { name: "Main Gate", coords: [27.801558, 75.036106] },
+                { name: "ABB", coords: [27.804224, 75.031385] },
+                { name: "Mess", coords: [27.803579, 75.030946] },
+                { name: "Athlete Ground", coords: [27.802583, 75.030098] },
+                { name: "Mess", coords: [27.803579, 75.030946] },
+                { name: "ABB", coords: [27.804224, 75.031385] },
+                { name: "Main Gate", coords: [27.801558, 75.036106] }
+            ],
+            "MUST_BUS_02": [
+                { name: "Main Gate", coords: [27.801558, 75.036106] },
+                { name: "ABB", coords: [27.804224, 75.031385] },
+                { name: "Mess", coords: [27.803579, 75.030946] },
+                { name: "Tapovan", coords: [27.801216, 75.029079] },
+                { name: "15 Street", coords: [27.798435, 75.027298] },
+                { name: "Tapovan", coords: [27.801216, 75.029079] },
+                { name: "Mess", coords: [27.803579, 75.030946] },
+                { name: "ABB", coords: [27.804224, 75.031385] },
+                { name: "Main Gate", coords: [27.801558, 75.036106] }
+            ],
+            "MUST-BUS-01": [
+                { name: "Main Gate", coords: [27.801558, 75.036106] },
+                { name: "ABB", coords: [27.804224, 75.031385] },
+                { name: "Mess", coords: [27.803579, 75.030946] },
+                { name: "Athlete Ground", coords: [27.802583, 75.030098] },
+                { name: "Mess", coords: [27.803579, 75.030946] },
+                { name: "ABB", coords: [27.804224, 75.031385] },
+                { name: "Main Gate", coords: [27.801558, 75.036106] }
+            ],
+            "MUST-BUS-02": [
+                { name: "Main Gate", coords: [27.801558, 75.036106] },
+                { name: "ABB", coords: [27.804224, 75.031385] },
+                { name: "Mess", coords: [27.803579, 75.030946] },
+                { name: "Tapovan", coords: [27.801216, 75.029079] },
+                { name: "15 Street", coords: [27.798435, 75.027298] },
+                { name: "Tapovan", coords: [27.801216, 75.029079] },
+                { name: "Mess", coords: [27.803579, 75.030946] },
+                { name: "ABB", coords: [27.804224, 75.031385] },
+                { name: "Main Gate", coords: [27.801558, 75.036106] }
+            ]
+        };
+
+        //for first shuttle
+        L.polyline(route1Coordinates, {
+            color: "#2563eb", //blue
+            weight: 5, //breadth
+            opacity: 0.7,
+        }).addTo(my_map).bindTooltip("Route 1: Athlete Ground Loop");
+
+        //for second shuttle
+        L.polyline(route2Coordinates, {
+            color: '#f97316',
+            weight: 5,
+            opacity: 0.65,
+            dashArray: '6, 8'
+        }).addTo(my_map).bindTooltip("Route 2: 15 Street Loop")
+
+        //creating a function to get the next stop of the current bus , that should return the coordinate of the next stop
+        function getNextStop(shuttle_id, currentStop) {
+            const stops = ROUTE_STOPS[shuttle_id];
+            if (!stops) return null;
+
+            const currentIndex = stops.findIndex(s => s.name === currentStop);
+            if (currentIndex != -1) {
+                const nextIndex = (currentIndex + 1) % stops.length;
+                return stops[nextIndex];
+            }
+
+            return stops[0];
+        }
+        // to calculate the distance between the two coordinates 
+        function getHaversineDistance(coord1, coord2) {
+            const R = 6371000;
+            const toRad = (deg) => (deg * Math.PI) / 180;// this is a small function we have cretaed to 
+            //change the coordinates into radion from degree
+
+            const lat1 = toRad(coord1[0]);
+            const lng1 = toRad(coord1[1]);
+            const lat2 = toRad(coord2[0]);
+            const lng2 = toRad(coord2[1]);
+
+            const dlat = lat1 - lat2;
+            const dlong = lng1 - lng2;
+
+            const a = Math.sin(dlat / 2) * Math.sin(dlat / 2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dlong / 2) *
+                Math.sin(dlong / 2);
+
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c;
+
+        }
+
+        function calculateETA(currentCoord, targetCoord, speedKmh) {
+
+            const distance = getHaversineDistance(currentCoord, targetCoord);
+            // converting the speed into m/s
+            const validspeed = speedKmh > 1 ? speedKmh : 15;
+            const speed = (validspeed * 5) / 18;
+
+            // calculating the ETA
+            const timeSec = distance / speed;
+            const timeMin = Math.ceil(timeSec / 60);
+
+            return {
+                distanceM: Math.round(distance),
+                timeMin: timeMin
+            };
+        }
+
+        // added one marker at the main gate co-ordinates
+        const marker = L.marker([27.801558, 75.036106]).addTo(my_map)
+
+        //added a pop up at  main gate 
+        marker.bindPopup("Mody University of Science and Technology")
+
+        // circled the whole university
+        const circle = L.circle([27.8025, 75.0325], {
+            radius: 1000,
+            color: 'yellow',
+            fillColor: 'blue',
+            fillOpacity: 0.2
+        }).addTo(my_map).bindPopup("Mody University of Science and Technology");
+
+        const shuttleMarkers = {};
+        const socket = new WebSocket("ws://localhost:8000/ws/shuttle");
+        const statusPill = document.getElementById('status-pill');
+
+        //when connection happens status bar changes its colour and give msg
+        socket.onopen = () => {
+            statusPill.textContent = "Live Tracking";
+            statusPill.style.backgroundColor = "#22c55e"; //  green
+            console.log("Websocket connected successfully");
+        }
+        //when connection closes
+        socket.onclose = () => {
+            statusPill.textContent = "Disconnected"
+            statusPill.style.backgroundColor = "#ef4444" //red
+            console.log("Websocket disconnected");
+        }
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            // Notice shuttle_id matches the key sent by test_driver.py
+            const { shuttle_id, lat, lng, speed, name } = data;
+
+            if (!shuttle_id || lat == undefined || lng == undefined) return;
+
+            const nextStop = getNextStop(shuttle_id, name);
+            if (!nextStop || !nextStop.coords) return;
+
+            const eta = calculateETA([lat, lng], nextStop.coords, speed);
+
+            const popupHtml = `<b>🚌 ${shuttle_id}</b><br>` +
+                `Current: ${name}<br>` +
+                `Speed: ${speed} km/h<br>` +
+                `<b>Next Stop: ${nextStop.name}</b> (~${eta.timeMin} min | ${eta.distanceM}m)`;
+
+
+            if (shuttleMarkers[shuttle_id]) {
+                shuttleMarkers[shuttle_id].setLatLng([lat, lng]);
+                shuttleMarkers[shuttle_id].setPopupContent(popupHtml);
+            }
+            else {
+                const marker = L.marker([lat, lng]).addTo(my_map);
+                marker.bindPopup(popupHtml);
+                shuttleMarkers[shuttle_id] = marker;
+            }
+        };
+
+
+    </script>
+</body>
+
+</html>
