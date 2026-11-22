@@ -82,46 +82,36 @@
             [27.801558, 75.036106]  // Main Gate (Return)
         ];
         const ROUTE_STOPS = {
-            "MUST_BUS_01": [
-                { name: "Main Gate", coords: [27.801558, 75.036106] },
-                { name: "ABB", coords: [27.804224, 75.031385] },
-                { name: "Mess", coords: [27.803579, 75.030946] },
-                { name: "Athlete Ground", coords: [27.802583, 75.030098] },
-                { name: "Mess", coords: [27.803579, 75.030946] },
-                { name: "ABB", coords: [27.804224, 75.031385] },
-                { name: "Main Gate", coords: [27.801558, 75.036106] }
-            ],
-            "MUST_BUS_02": [
-                { name: "Main Gate", coords: [27.801558, 75.036106] },
-                { name: "ABB", coords: [27.804224, 75.031385] },
-                { name: "Mess", coords: [27.803579, 75.030946] },
-                { name: "Tapovan", coords: [27.801216, 75.029079] },
-                { name: "15 Street", coords: [27.798435, 75.027298] },
-                { name: "Tapovan", coords: [27.801216, 75.029079] },
-                { name: "Mess", coords: [27.803579, 75.030946] },
-                { name: "ABB", coords: [27.804224, 75.031385] },
-                { name: "Main Gate", coords: [27.801558, 75.036106] }
-            ],
-            "MUST-BUS-01": [
-                { name: "Main Gate", coords: [27.801558, 75.036106] },
-                { name: "ABB", coords: [27.804224, 75.031385] },
-                { name: "Mess", coords: [27.803579, 75.030946] },
-                { name: "Athlete Ground", coords: [27.802583, 75.030098] },
-                { name: "Mess", coords: [27.803579, 75.030946] },
-                { name: "ABB", coords: [27.804224, 75.031385] },
-                { name: "Main Gate", coords: [27.801558, 75.036106] }
-            ],
-            "MUST-BUS-02": [
-                { name: "Main Gate", coords: [27.801558, 75.036106] },
-                { name: "ABB", coords: [27.804224, 75.031385] },
-                { name: "Mess", coords: [27.803579, 75.030946] },
-                { name: "Tapovan", coords: [27.801216, 75.029079] },
-                { name: "15 Street", coords: [27.798435, 75.027298] },
-                { name: "Tapovan", coords: [27.801216, 75.029079] },
-                { name: "Mess", coords: [27.803579, 75.030946] },
-                { name: "ABB", coords: [27.804224, 75.031385] },
-                { name: "Main Gate", coords: [27.801558, 75.036106] }
-            ]
+            "MUST_BUS_01": {
+                outbound: [
+                    { name: "Main Gate", coords: [27.801558, 75.036106] },
+                    { name: "ABB", coords: [27.804224, 75.031385] },
+                    { name: "Mess", coords: [27.803579, 75.030946] },
+                    { name: "Athlete Ground", coords: [27.802583, 75.030098] }
+                ],
+                inbound: [
+                    { name: "Athlete Ground", coords: [27.802583, 75.030098] },
+                    { name: "Mess", coords: [27.803579, 75.030946] },
+                    { name: "ABB", coords: [27.804224, 75.031385] },
+                    { name: "Main Gate", coords: [27.801558, 75.036106] }
+                ]
+            },
+            "MUST_BUS_02": {
+                outbound: [
+                    { name: "Main Gate", coords: [27.801558, 75.036106] },
+                    { name: "ABB", coords: [27.804224, 75.031385] },
+                    { name: "Mess", coords: [27.803579, 75.030946] },
+                    { name: "Tapovan", coords: [27.801216, 75.029079] },
+                    { name: "15 Street", coords: [27.798435, 75.027298] }
+                ],
+                inbound: [
+                    { name: "15 Street", coords: [27.798435, 75.027298] },
+                    { name: "Tapovan", coords: [27.801216, 75.029079] },
+                    { name: "Mess", coords: [27.803579, 75.030946] },
+                    { name: "ABB", coords: [27.804224, 75.031385] },
+                    { name: "Main Gate", coords: [27.801558, 75.036106] }
+                ]
+            }
         };
 
         //for first shuttle
@@ -140,17 +130,32 @@
         }).addTo(my_map).bindTooltip("Route 2: 15 Street Loop")
 
         //creating a function to get the next stop of the current bus , that should return the coordinate of the next stop
-        function getNextStop(shuttle_id, currentStop) {
-            const stops = ROUTE_STOPS[shuttle_id];
-            if (!stops) return null;
+        function getNextStop(shuttleId, direction, currentCoord) {
+            const normalizedId = shuttleId.replace(/-/g, "_");
+            const routeGroup = ROUTE_STOPS[normalizedId];
+            if (!routeGroup) return null;
 
-            const currentIndex = stops.findIndex(s => s.name === currentStop);
-            if (currentIndex != -1) {
-                const nextIndex = (currentIndex + 1) % stops.length;
-                return stops[nextIndex];
-            }
+            const dir = direction === "inbound" ? "inbound" : "outbound";
+            const stops = routeGroup[dir];
 
-            return stops[0];
+            // Find the stop closest to the shuttle's current GPS position
+            let closestIndex = 0;
+            let minDistance = Infinity;
+
+            stops.forEach((stop, idx) => {
+                const d = getHaversineDistance(currentCoord, stop.coords);
+                if (d < minDistance) {
+                    minDistance = d;
+                    closestIndex = idx;
+                }
+            });
+
+            // If within 40m of that stop (or moving past it), target the next stop in sequence
+            const nextIndex = (minDistance < 40 && closestIndex + 1 < stops.length)
+                ? closestIndex + 1
+                : closestIndex;
+
+            return stops[nextIndex];
         }
         // to calculate the distance between the two coordinates 
         function getHaversineDistance(coord1, coord2) {
@@ -228,27 +233,24 @@
 
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            // Notice shuttle_id matches the key sent by test_driver.py
-            const { shuttle_id, lat, lng, speed, name } = data;
+            const { shuttle_id, lat, lng, speed, direction } = data;
 
-            if (!shuttle_id || lat == undefined || lng == undefined) return;
+            if (!shuttle_id || lat === undefined || lng === undefined) return;
 
-            const nextStop = getNextStop(shuttle_id, name);
-            if (!nextStop || !nextStop.coords) return;
+            const dirLabel = direction === "inbound" ? "Inbound (Return)" : "Outbound";
+            const nextStop = getNextStop(shuttle_id, direction, [lat, lng]);
+            if (!nextStop) return;
 
             const eta = calculateETA([lat, lng], nextStop.coords, speed);
 
-            const popupHtml = `<b>🚌 ${shuttle_id}</b><br>` +
-                `Current: ${name}<br>` +
+            const popupHtml = `<b>🚌 ${shuttle_id}</b> (${dirLabel})<br>` +
                 `Speed: ${speed} km/h<br>` +
                 `<b>Next Stop: ${nextStop.name}</b> (~${eta.timeMin} min | ${eta.distanceM}m)`;
-
 
             if (shuttleMarkers[shuttle_id]) {
                 shuttleMarkers[shuttle_id].setLatLng([lat, lng]);
                 shuttleMarkers[shuttle_id].setPopupContent(popupHtml);
-            }
-            else {
+            } else {
                 const marker = L.marker([lat, lng]).addTo(my_map);
                 marker.bindPopup(popupHtml);
                 shuttleMarkers[shuttle_id] = marker;

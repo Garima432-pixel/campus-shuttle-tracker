@@ -18,6 +18,12 @@
     </select>
     <br><br>
 
+    <select id="directionSelect">
+        <option value="outbound">Outbound (Main Gate → 15 Street / Ground)</option>
+        <option value="inbound">Inbound (Return → Main Gate)</option>
+    </select>
+    <br><br>
+
     <!-- Action Button-->
     <button id="toggleBtn" onclick="toggleTracking()">Start Driving</button>
 
@@ -55,9 +61,11 @@
 
                 const shuttleSelectElem = document.getElementById("shuttleSelect");
                 const shuttle_id = shuttleSelectElem ? shuttleSelectElem.value : "MUST_BUS_01";
+                const direction = document.getElementById("directionSelect").value;
 
                 const payload = {
                     "shuttle_id": shuttle_id,
+                    "Direction": direction,
                     "lat": latitude,
                     "lng": longitude,
                     "speed": Math.round(speed),
